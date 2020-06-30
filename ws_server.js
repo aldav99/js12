@@ -26,48 +26,13 @@ wsConnection.on("connection", ws => {
 
         switch (message.command.toString()) {
             case "login":
-                console.log("---branch---login");
-                user.name = message.username;
-                user.loginChannel(message.channel);
-                console.log(user.name);
-                console.log(user._channels);
-                return;
+                return loginUser(user, message);
             case "logout":
-                let channelUser = message.channel;
-
-                if (user.isLoggedIn(channelUser)) {
-                    user.logoutChannel(channelUser);
-                } else {
-                    user.connection.send(JSON.stringify('It is not your channel!'));
-                    return;
-                }
-
-                for (let client of clients) {
-                    if (client.isLoggedIn(channelUser)) {
-                        client.connection.send(JSON.stringify(`User ${user.name} left channel ${channelUser}`));
-                    }
-                }
-
-                return;
+                return logoutUser(user, message);
             case "sendMessage":
-                console.log("---branch---sendMessage");
-                for (let client of clients) {
-
-                    if (client.isLoggedIn(message.channel)) {
-                        client.connection.send(JSON.stringify({
-                            channel: message.channel,
-                            username: user.name,
-                            message: message.message
-                        }));
-                    }
-                }
-
-                return;
+                return sendMessageToChannel(message, user);
             case "exitChat":
-                user.connection.send(JSON.stringify('Youre existing from Chat!'));
-                user.connection.close();
-                clients.delete(user);
-                return;
+                return exitUserFromChat(user);
             default:
                 user.connection.send(JSON.stringify("Unknown command"));
                 return;
@@ -79,3 +44,50 @@ wsConnection.on("connection", ws => {
     });
 
 });
+
+function exitUserFromChat(user) {
+    user.connection.send(JSON.stringify('Youre existing from Chat!'));
+    user.connection.close();
+    clients.delete(user);
+    return;
+}
+
+function sendMessageToChannel(message, user) {
+    for (let client of clients) {
+
+        if (client.isLoggedIn(message.channel)) {
+            client.connection.send(JSON.stringify({
+                channel: message.channel,
+                username: user.name,
+                message: message.message
+            }));
+        }
+    }
+
+    return;
+}
+
+function loginUser(user, message) {
+    user.name = message.username;
+    user.loginChannel(message.channel);
+    return;
+}
+
+function logoutUser(user, message) {
+    let channelUser = message.channel;
+
+    if (user.isLoggedIn(channelUser)) {
+        user.logoutChannel(channelUser);
+    } else {
+        user.connection.send(JSON.stringify('It is not your channel!'));
+        return;
+    }
+
+    for (let client of clients) {
+        if (client.isLoggedIn(channelUser)) {
+            client.connection.send(JSON.stringify(`User ${user.name} left channel ${channelUser}`));
+        }
+    }
+
+    return;
+}
